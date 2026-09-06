@@ -13,41 +13,22 @@ client = hvac.Client(
 
 # Key Initialization
 
-def initialize_master_key():
+def initialize_keys():
     master_key = base64.b64encode(secrets.token_bytes(32)).decode()
-    client.secrets.kv.v2.create_or_update_secret(
-        path="/projects/pwd-manager",
-        secret=dict(master_key=master_key)
-    )
-    set_key(
-        dotenv_path='.env',
-        key_to_set="INITIALIZED_DB_KEY",
-        value_to_set="True"
-    )
-    return True
-
-def initialize_db_key():
     db_key = base64.b64encode(secrets.token_bytes(32)).decode()
     client.secrets.kv.v2.create_or_update_secret(
         path="/projects/pwd-manager",
-        secret=dict(db_key=db_key)
+        secret=dict(master_key=master_key, db_key=db_key)
     )
-    set_key(
-        dotenv_path='.env',
-        key_to_set="INITIALIZED_MASTER_KEY",
-        value_to_set="True"
-    )
+    set_key(dotenv_path=".env", key_to_set="INITIALIZED_MASTER_KEY", value_to_set="True")
+    set_key(dotenv_path=".env", key_to_set="INITIALIZED_DB_KEY", value_to_set="True")
     return True
 
-if os.getenv("INITIALIZED_MASTER_KEY"):
+if os.getenv("INITIALIZED_MASTER_KEY") and os.getenv("INITIALIZED_DB_KEY"):
     pass
 else:
-    initialize_master_key()
-
-if os.getenv("INITIALIZED_DB_KEY"):
-    pass
-else:
-    initialize_db_key()
+    print("db key initializing")
+    initialize_keys()
 
 ####################
 
