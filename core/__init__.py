@@ -1,1 +1,1 @@
-from .core import get_key
+from .core import get_master_key

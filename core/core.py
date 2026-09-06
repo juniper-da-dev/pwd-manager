@@ -13,7 +13,7 @@ client = hvac.Client(
 
 # Key Initialization
 
-def initialize_key():
+def initialize_master_key():
     master_key = base64.b64encode(secrets.token_bytes(32)).decode()
     client.secrets.kv.v2.create_or_update_secret(
         path="/projects/pwd-manager",
@@ -21,23 +21,50 @@ def initialize_key():
     )
     set_key(
         dotenv_path='.env',
-        key_to_set="initialized",
+        key_to_set="INITIALIZED_DB_KEY",
         value_to_set="True"
     )
     return True
 
-if os.getenv("initialized"):
+def initialize_db_key():
+    db_key = base64.b64encode(secrets.token_bytes(32)).decode()
+    client.secrets.kv.v2.create_or_update_secret(
+        path="/projects/pwd-manager",
+        secret=dict(db_key=db_key)
+    )
+    set_key(
+        dotenv_path='.env',
+        key_to_set="INITIALIZED_MASTER_KEY",
+        value_to_set="True"
+    )
+    return True
+
+if os.getenv("INITIALIZED_MASTER_KEY"):
     pass
 else:
-    initialize_key()
+    initialize_master_key()
+
+if os.getenv("INITIALIZED_DB_KEY"):
+    pass
+else:
+    initialize_db_key()
 
 ####################
 
-def get_key():
+def get_master_key():
     secret = client.secrets.kv.v2.read_secret_version(
         path="projects/pwd-manager",
         raise_on_deleted_version=True
     )
 
     master_key = base64.b64decode(secret["data"]["data"]["master_key"])
+    return master_key
+
+def get_db_key():
+    secret = client.secrets.kv.v2.read_secret_version(
+        path="projects/pwd-manager",
+        raise_on_deleted_version=True
+    )
+
+    master_key = base64.b64decode(secret["data"]["data"]["db_key"])
     return master_key
