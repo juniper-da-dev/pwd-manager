@@ -32,7 +32,7 @@ ROOT_PASSWORD = os.getenv("ROOT_PASSWORD")
 def initialize_account(username, password):
     user = encrypt(password, username, "USERNAME")
     password = ph.hash(password)
-    conn = pymysql.connect(host=HOST, port=PORT, user="root", password="a89Kj6If80wExCj9E8iTSfKSpfJKoZ", database=DB)
+    conn = pymysql.connect(host=HOST, port=PORT, user=ROOT_USER, password=ROOT_USER, database=DB)
     try:
         with conn.cursor() as cur:
             # launguage=sql
@@ -56,8 +56,6 @@ def initialize_account(username, password):
 
     finally:
         conn.close()
-
-    return id
 
 try:
     print(initialize_account("tester", "hello-test"))
