@@ -51,4 +51,3 @@ def decrypt(password, text, aad):
         raise InvalidKey
     return decrypted_text.decode("utf-8")
 
-
