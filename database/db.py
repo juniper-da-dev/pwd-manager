@@ -6,6 +6,7 @@ import pymysql
 from argon2.exceptions import InvalidHash, VerifyMismatchError, InvalidHashError
 from dotenv import load_dotenv
 from argon2 import PasswordHasher
+from dbutils.pooled_db import PooledDB
 
 from crypto import encrypt
 from crypto.exceptions import InvalidKey, InvalidData
@@ -26,21 +27,17 @@ HOST = require_env("MYSQL_HOST")
 PORT = int(require_env("MYSQL_PORT"))
 DB = "appdb"
 
-APP_USER = "appuser"
-APP_PASSWORD = os.getenv("APP_PASSWORD")
-
-ROOT_USER = "root"
-ROOT_PASSWORD = os.getenv("ROOT_PASSWORD")
+pool = PooledDB(
+    creator=pymysql,
+    host=HOST,
+    port=PORT,
+    user=require_env("MYSQL_USER_USERNAME"),
+    password=require_env("MYSQL_USER_PASSWORD"),
+    database=DB,
+)
 
 if not os.path.exists(".db_initialized"):
-    conn = pymysql.connect(
-        host=HOST,
-        port=PORT,
-        user=ROOT_USER,
-        password="a89Kj6If80wExCj9E8iTSfKSpfJKoZ",
-        database=DB
-    )
-
+    conn = pool.connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
@@ -73,47 +70,60 @@ if not os.path.exists(".db_initialized"):
         conn.close()
 
 def verify_password(account_id, password):
-    conn = pymysql.connect(
-        host=HOST,
-        port=PORT,
-        user="root",
-        password="a89Kj6If80wExCj9E8iTSfKSpfJKoZ",
-        database=DB
-    )
-
-    with conn.cursor() as cur:
-        cur.execute("SELECT * FROM users WHERE internal_id = %s", (account_id,))
-        result = cur.fetchone()
-
-        if result is None: raise NoAccount
-        stored_password = result[2]
-
-        try:
-            ph.verify(stored_password, password)
-            return True
-        except InvalidHashError:
-            raise InvalidData("Hash")
-        except VerifyMismatchError:
-            raise InvalidKey
-
-def initialize_account(username, password):
-    user = encrypt(password, username, "USERNAME")
-    password = ph.hash(password)
-    conn = pymysql.connect(host=HOST, port=PORT, user=ROOT_USER, password="a89Kj6If80wExCj9E8iTSfKSpfJKoZ", database=DB)
+    conn = pool.connection()
     try:
         with conn.cursor() as cur:
-            # launguage=sql
+            cur.execute("SELECT * FROM users WHERE internal_id = %s", (account_id,))
+            result = cur.fetchone()
+
+            if result is None: raise NoAccount
+            stored_password = result[2]
+
+            try:
+                ph.verify(stored_password, password)
+                return True
+            except InvalidHashError:
+                raise InvalidData("Hash")
+            except VerifyMismatchError:
+                raise InvalidKey
+    finally:
+        conn.commit()
+        conn.close()
+
+def initialize_account(username, password):
+    conn = pool.connection()
+    user = encrypt(password, username, "USERNAME")
+    password = ph.hash(password)
+    try:
+        with conn.cursor() as cur:
             cur.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (user, password))
             cur.execute("SELECT internal_id FROM users WHERE username = %s", (user,))
             result = cur.fetchone()[0]
 
             return result
-
+    except pymysql.err.IntegrityError as e:
+        code = e.args[0]
+        if code == 1062:
+            raise InvalidData("Username was not unique")
     finally:
         conn.commit()
         conn.close()
 
+def store_password(account_id, pwd, service, password):
+    conn = pool.connection()
+    try:
+        verify_password(account_id, pwd)
+    except InvalidKey:
+        raise InvalidKey
 
-verify_password(initialize_account("Aaj", "051114"), "051114")
+    service = encrypt(pwd, service, "SERVICE")
+    password = encrypt(pwd, password, "PASSWORD")
 
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO passwords (account_id, service, password) VALUES (%s, %s, %s)", (account_id, service, password))
 
+            return True
+    finally:
+        conn.commit()
+        conn.close()
