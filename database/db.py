@@ -42,12 +42,9 @@ if not os.path.exists(".db_initialized"):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS users
+                CREATE TABLE IF NOT EXISTS projects 
                 (
-                    internal_id INT          NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                    username    VARCHAR(255) NOT NULL UNIQUE,
-                    password    VARCHAR(255) NOT NULL
-                )
+                    project_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                 """
             )
             cur.execute(
@@ -55,10 +52,10 @@ if not os.path.exists(".db_initialized"):
                 CREATE TABLE IF NOT EXISTS passwords
                 (
                     pwd_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                    account_id INT NOT NULL,
+                    project_id INT NOT NULL,
                     service VARCHAR(255) NOT NULL,
                     password VARCHAR(255) NOT NULL,
-                    FOREIGN KEY (account_id) REFERENCES users(internal_id)
+                    FOREIGN KEY (project_id) REFERENCES users(internal_id)
                 )
                 """
             )
@@ -115,9 +112,11 @@ def store_password(account_id, pwd, service, password):
         verify_password(account_id, pwd)
     except InvalidKey:
         raise InvalidKey
+    except NoAccount:
+        raise NoAccount
 
-    service = encrypt(pwd, service, "SERVICE")
-    password = encrypt(pwd, password, "PASSWORD")
+    service = encrypt(pwd, service, f"SERVICE_{account_id}")
+    password = encrypt(pwd, password, f"PASSWORD_{account_id}")
 
     try:
         with conn.cursor() as cur:
@@ -126,4 +125,4 @@ def store_password(account_id, pwd, service, password):
             return True
     finally:
         conn.commit()
-        conn.close()
+        conn.close()    
