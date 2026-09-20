@@ -42,20 +42,22 @@ if not os.path.exists(".db_initialized"):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS projects 
+                CREATE TABLE IF NOT EXISTS projects
                 (
                     project_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                    project_name VARCHAR(255) NOT NULL
+                )
                 """
             )
             cur.execute(
                 """
-                CREATE TABLE IF NOT EXISTS passwords
+                CREATE TABLE IF NOT EXISTS kms
                 (
                     pwd_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
                     project_id INT NOT NULL,
-                    service VARCHAR(255) NOT NULL,
-                    password VARCHAR(255) NOT NULL,
-                    FOREIGN KEY (project_id) REFERENCES users(internal_id)
+                    name VARCHAR(255) NOT NULL,
+                    value VARCHAR(255) NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects(project_id)
                 )
                 """
             )
