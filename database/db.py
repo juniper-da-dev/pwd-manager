@@ -16,7 +16,7 @@ class Secret:
         self.value = value
         self.project_id = project_id
 
-async def create_secret(key, value, project_id):
+def create_secret(key, value, project_id):
     secret_class = Secret(key, value, project_id)
     secret = {
         "project_id": secret_class.project_id,
