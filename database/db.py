@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 
 import os
-from typing import TypedDict
+import sys
 
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
 
 uri = os.environ.get("MONGO_URI")
-client = MongoClient(uri)
+
+try:
+    client = MongoClient(uri, serverSelectionTimeoutMS=5000)
+    # Verify connection
+    client.server_info()
+    print("Successfully connected to MongoDB!")
+except ConnectionFailure:
+    print("Failed to connect to the MongoDB server.")
+    sys.exit(1)
+
 db = client["Vault"]
 secret_db = db["Secrets"]
 
