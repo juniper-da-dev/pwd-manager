@@ -2,10 +2,15 @@
 
 import os
 import sys
+from dotenv import load_dotenv
+import crypto
 
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
+from crypto import encrypt
+
+load_dotenv()
 uri = os.environ.get("MONGO_URI")
 
 try:
@@ -13,16 +18,18 @@ try:
     # Verify connection
     client.server_info()
     print("Successfully connected to MongoDB!")
-except ConnectionFailure:
-    print("Failed to connect to the MongoDB server.")
+except ConnectionFailure as e:
+    print(f"Failed to connect to the MongoDB server. {e}")
     sys.exit(1)
 
 db = client["Vault"]
 secret_db = db["Secrets"]
 
+
+
 class Secret:
     def __init__(self, key, value, project_id):
-        self.key = key
+        self.key = encrypt()
         self.value = value
         self.project_id = project_id
 
@@ -36,5 +43,8 @@ def create_secret(key, value, project_id):
     secret_db.insert_one(secret)
     return True
 
-create_secret("test", "test", "123")
+def get_secret(key, project_id):
+
+# create_secret("test", "test", "123")
+
 
