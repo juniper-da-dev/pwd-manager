@@ -1,27 +1,24 @@
 from cryptography import x509
-from
+
 
 import nacl.utils
-from nacl.secret import SecretBox, Aead
-from nacl.pwhash import argon2id
+from cryptography import x509
+from cryptography.x509.oid import NameOID
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
 
-from crypto.exceptions import InvalidKey
+from exceptions import InvalidKey
 
-if __name__ == "__main__":
-    def create_key():
-        passphrase = nacl.utils.random(nacl.secret.Aead.KEY_SIZE)
+OEAP = padding.OAEP(
+    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+    algorithm=hashes.SHA256(),
+    label=None
+)
 
-        if not passphrase or len(passphrase) <=6:
-            raise InvalidKey("Passphrase must be at least 6 characters long")
-        key = argon2id.kdf(
-            size=nacl.secret.Aead.KEY_SIZE,
-            password=passphrase,
-            salt=nacl.utils.random(argon2id.SALTBYTES)
-        )
-        try:
-            with open("keyfile.key", "xb") as f:
-                f.write(key)
-        except FileExistsError:
-            raise FileExistsError("Key file already exists")
-
-
+def load_pem(path, passphrase=None):
+    with open(path, 'rb') as f:
+        data = f.read()
+    return (
+        serialization.load_pem_private_key(data, passphrase),
+        x509.load_pem_x509_certificate(data)
+    )
