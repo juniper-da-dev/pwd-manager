@@ -8,17 +8,7 @@ OEAP = padding.OAEP(
     label=None,
 )
 
-
-def load_pem(path, passphrase=None):
-    with open(path, "rb") as f:
-        data = f.read()
-    cert = serialization.load_pem_private_key(data, passphrase)
-
-    assert isinstance(cert, rsa.RSAPrivateKey)
-    assert isinstance(cert.public_key(), rsa.RSAPublicKey)
-
-    return cert
-
+#### INITIALIZATION ####
 
 def create_pem():
     private_key = rsa.generate_private_key(
@@ -44,3 +34,28 @@ def create_keyfile():
     pub_key = cert.public_key()
     with open("keyfile.key", "+xb") as f:
         f.write(pub_key.encrypt(key, OEAP))
+
+########################
+
+#### CORE FUNCTIONS ####
+
+def load_pem(path, passphrase=None):
+    with open(path, "rb") as f:
+        data = f.read()
+    cert = serialization.load_pem_private_key(data, passphrase)
+
+    assert isinstance(cert, rsa.RSAPrivateKey)
+    assert isinstance(cert.public_key(), rsa.RSAPublicKey)
+
+    return cert
+
+def load_keyfile():
+    with open("keyfile.key", "wb") as f:
+        encrypted_keyfile = f.read()
+
+    private_key = load_pem("test.pem")
+    plain_key = private_key.decrypt(encrypted_keyfile, OEAP)
+
+    return plain_key
+
+########################
