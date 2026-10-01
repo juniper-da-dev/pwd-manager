@@ -8,8 +8,9 @@ OEAP = padding.OAEP(
     label=None,
 )
 
+
 def load_pem(path, passphrase=None):
-    with open(path, 'rb') as f:
+    with open(path, "rb") as f:
         data = f.read()
     cert = serialization.load_pem_private_key(data, passphrase)
 
@@ -18,6 +19,7 @@ def load_pem(path, passphrase=None):
 
     return cert
 
+
 def create_pem():
     private_key = rsa.generate_private_key(
         public_exponent=65537,
@@ -25,11 +27,13 @@ def create_pem():
     )
 
     with open("test.pem", "wb") as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
+        f.write(
+            private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
 
     assert isinstance(private_key, rsa.RSAPrivateKey)
 
@@ -39,19 +43,4 @@ def create_keyfile():
     cert = load_pem("test.pem")
     pub_key = cert.public_key()
     with open("keyfile.key", "+xb") as f:
-        f.write(pub_key.encrypt(
-            key,
-            OEAP
-        ))
-
-def decrypt_keyfile():
-    cert = load_pem("test.pem")
-    private_key = cert
-
-    with open("keyfile.key", "rb") as f:
-        keyfile = f.read()
-
-    assert isinstance(private_key, rsa.RSAPrivateKey)
-    return private_key.decrypt(keyfile, OEAP)
-
-print(decrypt_keyfile())
+        f.write(pub_key.encrypt(key, OEAP))
