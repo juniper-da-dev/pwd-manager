@@ -1,6 +1,11 @@
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
+from functools import lru_cache
+
+from crypto.core import load_keyfile
+
+#### CORE FUNCTIONS/VARIABLES ####
 
 OEAP = padding.OAEP(
     mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -8,50 +13,11 @@ OEAP = padding.OAEP(
     label=None,
 )
 
-def load_pem(path, passphrase=None):
-    with open(path, 'rb') as f:
-        data = f.read()
-    cert = serialization.load_pem_private_key(data, passphrase)
+@lru_cache(maxsize=1)
+def get_cipher():
+    print("Loading Keyfile...")
 
-    assert isinstance(cert, rsa.RSAPrivateKey)
-    assert isinstance(cert.public_key(), rsa.RSAPublicKey)
+    key = load_keyfile()
+    return ChaCha20Poly1305(key)
 
-    return cert
-
-def create_pem():
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=3072,
-    )
-
-    with open("test.pem", "wb") as f:
-        f.write(private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        ))
-
-    assert isinstance(private_key, rsa.RSAPrivateKey)
-
-
-def create_keyfile():
-    key = ChaCha20Poly1305.generate_key()
-    cert = load_pem("test.pem")
-    pub_key = cert.public_key()
-    with open("keyfile.key", "+xb") as f:
-        f.write(pub_key.encrypt(
-            key,
-            OEAP
-        ))
-
-def decrypt_keyfile():
-    cert = load_pem("test.pem")
-    private_key = cert
-
-    with open("keyfile.key", "rb") as f:
-        keyfile = f.read()
-
-    assert isinstance(private_key, rsa.RSAPrivateKey)
-    return private_key.decrypt(keyfile, OEAP)
-
-print(decrypt_keyfile())
+##################################

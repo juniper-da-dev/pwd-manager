@@ -1,3 +1,4 @@
+from cryptography.exceptions import UnsupportedAlgorithm
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -16,7 +17,7 @@ def create_pem():
         key_size=3072,
     )
 
-    with open("test.pem", "wb") as f:
+    with open("test.pem", "wb") as f: # TODO: Make this into a argument or deprecate it altogether
         f.write(
             private_key.private_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -40,9 +41,9 @@ def create_keyfile():
 #### CORE FUNCTIONS ####
 
 def load_pem(path, passphrase=None):
-    with open(path, "rb") as f:
+    with open(path, "rb") as f: # TODO: Make this into a argument
         data = f.read()
-    cert = serialization.load_pem_private_key(data, passphrase)
+    cert = serialization.load_pem_private_key(data, passphrase) # TODO: Add error handling for key serialization
 
     assert isinstance(cert, rsa.RSAPrivateKey)
     assert isinstance(cert.public_key(), rsa.RSAPublicKey)
@@ -50,12 +51,13 @@ def load_pem(path, passphrase=None):
     return cert
 
 def load_keyfile():
-    with open("keyfile.key", "wb") as f:
+    with open("keyfile.key", "rb") as f:
         encrypted_keyfile = f.read()
 
     private_key = load_pem("test.pem")
-    plain_key = private_key.decrypt(encrypted_keyfile, OEAP)
+    plain_key = private_key.decrypt(encrypted_keyfile, OEAP) # TODO: Add error handling for decryption
 
     return plain_key
 
 ########################
+
