@@ -3,7 +3,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 
-OEAP = padding.OAEP(
+OAEP = padding.OAEP(
     mgf=padding.MGF1(algorithm=hashes.SHA256()),
     algorithm=hashes.SHA256(),
     label=None,
@@ -34,15 +34,16 @@ def create_keyfile():
     cert = load_pem("test.pem")
     pub_key = cert.public_key()
     with open("keyfile.key", "+xb") as f:
-        f.write(pub_key.encrypt(key, OEAP))
+        f.write(pub_key.encrypt(key, OAEP))
 
 ########################
 
 #### CORE FUNCTIONS ####
 
 def load_pem(path, passphrase=None):
-    with open(path, "rb") as f: # TODO: Make this into a argument
+    with open(path, "rb") as f: # TODO: Make this a argument
         data = f.read()
+
     cert = serialization.load_pem_private_key(data, passphrase) # TODO: Add error handling for key serialization
 
     assert isinstance(cert, rsa.RSAPrivateKey)
@@ -55,7 +56,7 @@ def load_keyfile():
         encrypted_keyfile = f.read()
 
     private_key = load_pem("test.pem")
-    plain_key = private_key.decrypt(encrypted_keyfile, OEAP) # TODO: Add error handling for decryption
+    plain_key = private_key.decrypt(encrypted_keyfile, OAEP) # TODO: Add error handling for decryption
 
     return plain_key
 
