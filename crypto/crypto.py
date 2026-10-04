@@ -1,6 +1,7 @@
 import os
 import sys
 
+from cryptography.exceptions import InvalidTag, InvalidKey
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -10,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core import load_keyfile
 
-#### CORE FUNCTIONS/VARIABLES ####
+#### CORE/HELPER FUNCTIONS/VARIABLES ####
 
 OEAP = padding.OAEP(
     mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -25,24 +26,30 @@ def get_cipher():
     key = load_keyfile()
     return ChaCha20Poly1305(key)
 
-##################################
+def _to_bytes(text):
+    return None if text is None else text.encode("utf-8")
+
+#########################################
 
 def encrypt(text, aad=None):
     nonce = os.urandom(12)
     cipher = get_cipher()
-    aad = bytes(aad, encoding="utf-8") if aad is not None else None
 
-    encrypted_msg = cipher.encrypt(nonce, bytes(text, encoding="utf-8"), aad)
+    encrypted_msg = cipher.encrypt(nonce, text.encode('utf-8'), _to_bytes(aad))
 
     return encrypted_msg + nonce
 
 def decrypt(text, aad=None):
     nonce = text[-12:]
     text = text[:-12]
-    aad = bytes(aad, encoding="utf-8") if aad is not None else None
     cipher = get_cipher()
 
-    return cipher.decrypt(nonce, text, aad)
+    try:
+        decrypted_msg = cipher.decrypt(nonce, text, _to_bytes(aad))
+    except InvalidTag:
+        raise InvalidKey
+
+    return decrypted_msg
 
 etext = encrypt("Hello World")
 utext = decrypt(etext)
