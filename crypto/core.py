@@ -1,5 +1,5 @@
 from pathlib import Path
-import argparse
+import click
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
@@ -14,11 +14,10 @@ OAEP = padding.OAEP(
 def _to_bytes(text):
     return None if text is None else text.encode("utf-8")
 
-arg = argparse.ArgumentParser(description="Cryptography core module.")
 
 #### INITIALIZATION ####
 
-def create_pem(path: Path, passphrase: str | None = None) -> None:
+def create_pem(path, passphrase: str | None = None) -> None:
     private_key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=3072,
@@ -41,12 +40,9 @@ def create_pem(path: Path, passphrase: str | None = None) -> None:
         f.write(private_bytes)
 
 
-    assert isinstance(private_key, rsa.RSAPrivateKey)
-
-
 def create_keyfile(cert_file, passphrase=None):
     key = AESGCMSIV.generate_key(bit_length=192)
-    cert = load_pem(cert_file)
+    cert = load_pem(cert_file, passphrase)
     pub_key = cert.public_key()
     with open("keyfile.key", "+xb") as f:
         f.write(pub_key.encrypt(key, OAEP))
@@ -56,30 +52,32 @@ def create_keyfile(cert_file, passphrase=None):
 #### CORE FUNCTIONS ####
 
 def load_pem(path, passphrase=None):
+    path = Path(path)
     with open(path, "rb") as f: # TODO: Make this a argument
         data = f.read()
 
-    cert = serialization.load_pem_private_key(data, passphrase) # TODO: Add error handling for key serialization
+    try:
+        cert = serialization.load_pem_private_key(data, _to_bytes(passphrase)) # TODO: Add error handling for key serialization
+        return cert
+    except (TypeError, ValueError) as e:
+        if str(e) == "Incorrect password, could not decrypt key":
+            print("WEE WOO WEE WOO PASSWORD INCORRECT")
+        else:
+            print(e)
 
-    assert isinstance(cert, rsa.RSAPrivateKey)
-    assert isinstance(cert.public_key(), rsa.RSAPublicKey)
-
-    return cert
-
-def load_keyfile():
+def load_keyfile(cert_file, passphrase=None):
     with open("keyfile.key", "rb") as f:
         encrypted_keyfile = f.read()
 
-    private_key = load_pem("test.pem")
+    private_key = load_pem(cert_file, passphrase)
     plain_key = private_key.decrypt(encrypted_keyfile, OAEP) # TODO: Add error handling for decryption
 
     return plain_key
 
 ########################
 
-if open("keyfile.key", "rb").read():
-    pass
-else:
-    print("Please run 'python core/core.py --create-keyfile --pem <keyfile>' first.")
-    raise SystemExit
+create_pem("keyfile.pem", "testing")
+create_keyfile("keyfile.pem", "testing")
+print(load_keyfile("keyfile.pem", "testing"))
+
 
